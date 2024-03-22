@@ -38,7 +38,7 @@ def save_json(data):
     with open(file_path, 'w', encoding='utf-8') as f:
         json.dump(data, f, ensure_ascii=False, indent=4)
     
-    print(f'Data has been written to {file_path}.')
+    print(f' Data has been written to {file_path}.')
             
 def get_endpoints(links):
     uri = 'https://sais.health.pa.gov/CommonPOC/Content/PublicWeb/'
@@ -61,9 +61,9 @@ def get_links(url, headers):
     table = content_container.find('table')
     rows =  table.find_all('tr')
 
-    filterd_rows = [row for row in rows if len(row.find_all('td')) >= 4 and contains_m(row.find_all('td')[3].text)]
+    filtered_rows = [row for row in rows if len(row.find_all('td')) >= 4 and contains_m(row.find_all('td')[3].text)]
     # links = [[cell for cell in row.find_all('td')[1]] for row in filterd_rows]
-    urls = [cell.find('a')['href'] for row in filterd_rows for cell in row.find_all('td', limit=2) if cell.find('a')]
+    urls = [cell.find('a')['href'] for row in filtered_rows for cell in row.find_all('td', limit=2) if cell.find('a')]
     
     return urls
 
@@ -109,7 +109,7 @@ def scrape_pages(link, headers, cookies, data):
         for option in options:
             eventid = option['value']
             date_txt = option.text.strip()
-            # print(f"Processing {date_txt} with eventid {eventid}") #Debugg line
+            # DEBUG print(f"Processing {date_txt} with eventid {eventid}") 
             survey_details = {'eventid': eventid, 'date': date_txt}
             
             survey_url = f"{base_url}ltc-survey.asp?facid={facid}&page=1&name=&SurveyType=H&eventid={eventid}" 
@@ -135,50 +135,23 @@ def filter_surveys_by_year(options, years=[2023, 2024]):
             survey_date = datetime.strptime(date_text, "%m/%d/%Y")
             if survey_date.year in years:
                 filtered_options.append(option)
-                print(f"Filtered Dates: Complete {filtered_options}")
+                # DEBUG print(f"Filtered Dates: Complete {filtered_options}")
         except ValueError:
             # Handle date format does not match or parsing fails
             print(f"Error parsing date for option: {date_text}")
     return filtered_options
+
+def run_app(endpoints, headers, cookies, data):
+    for link in tqdm(endpoints, desc="Scraping Progress", unit="link"):
+        data = scrape_pages(link, headers, cookies, data)
+        if data is not None: 
+            save_json(data)
+        else:
+            print(f"No data to save for link: {link}")
  
 def main():
     
-    links = [
-        # "https://sais.health.pa.gov/CommonPOC/Content/PublicWeb/ltc-survey.asp?Facid=450501&PAGE=1&SurveyType=H",
-        # "https://sais.health.pa.gov/CommonPOC/Content/PublicWeb/ltc-survey.asp?Facid=234501&PAGE=1&SurveyType=H", # Wilkes Barre General
-        # "https://sais.health.pa.gov/CommonPOC/Content/PublicWeb/ltc-survey.asp?Facid=450501&PAGE=1&SurveyType=H",
-        # "https://sais.health.pa.gov/CommonPOC/Content/PublicWeb/ltc-survey.asp?Facid=22800101&PAGE=1&SurveyType=H",
-        # "https://sais.health.pa.gov/CommonPOC/Content/PublicWeb/ltc-survey.asp?Facid=200701&PAGE=1&SurveyType=H",
-        # "https://sais.health.pa.gov/CommonPOC/Content/PublicWeb/ltc-survey.asp?Facid=200801&PAGE=1&SurveyType=H",
-        # "https://sais.health.pa.gov/CommonPOC/Content/PublicWeb/ltc-survey.asp?Facid=340601&PAGE=1&SurveyType=H",
-        # "https://sais.health.pa.gov/CommonPOC/Content/PublicWeb/ltc-survey.asp?Facid=163301&PAGE=1&SurveyType=H",
-        # "https://sais.health.pa.gov/CommonPOC/Content/PublicWeb/ltc-survey.asp?Facid=196901&PAGE=1&SurveyType=H",
-        # "https://sais.health.pa.gov/CommonPOC/Content/PublicWeb/ltc-survey.asp?Facid=196901&PAGE=1&SurveyType=H",
-        # "https://sais.health.pa.gov/CommonPOC/Content/PublicWeb/ltc-survey.asp?Facid=234601&PAGE=1&SurveyType=H"
-        # "https://sais.health.pa.gov/CommonPOC/Content/PublicWeb/ltc-survey.asp?Facid=530201&PAGE=1&SurveyType=H",
-        # "https://sais.health.pa.gov/CommonPOC/Content/PublicWeb/ltc-survey.asp?Facid=50630101&PAGE=1&SurveyType=H",
-        # "https://sais.health.pa.gov/CommonPOC/Content/PublicWeb/ltc-survey.asp?Facid=072001&PAGE=1&SurveyType=H",
-        # "https://sais.health.pa.gov/zCommonPOC/Content/PublicWeb/ltc-survey.asp?Facid=072001&PAGE=1&SurveyType=H",
-        # "https://sais.health.pa.gov/CommonPOC/Content/PublicWeb/ltc-survey.asp?Facid=072001&PAGE=1&SurveyType=H",
-        # "https://sais.health.pa.gov/CommonPOC/Content/PublicWeb/ltc-survey.asp?Facid=421001&PAGE=1&SurveyType=H",
-        # "https://sais.health.pa.gov/CommonPOC/Content/PublicWeb/ltc-survey.asp?Facid=421001&PAGE=1&SurveyType=H",
-        # "https://sais.health.pa.gov/CommonPOC/Content/PublicWeb/ltc-survey.asp?Facid=421001&PAGE=1&SurveyType=H",
-        # "https://sais.health.pa.gov/CommonPOC/Content/PublicWeb/ltc-survey.asp?Facid=421001&PAGE=1&SurveyType=H",
-        # "https://sais.health.pa.gov/CommonPOC/Content/PublicWeb/ltc-survey.asp?Facid=123101&PAGE=1&SurveyType=H",
-        # "https://sais.health.pa.gov/CommonPOC/Content/PublicWeb/ltc-survey.asp?Facid=135101&PAGE=1&SurveyType=H",
-        # "https://sais.health.pa.gov/CommonPOC/Content/PublicWeb/ltc-survey.asp?Facid=135501&PAGE=1&SurveyType=H",
-        # "https://sais.health.pa.gov/CommonPOC/Content/PublicWeb/ltc-survey.asp?Facid=135501&PAGE=1&SurveyType=H",
-        # "https://sais.health.pa.gov/CommonPOC/Content/PublicWeb/ltc-survey.asp?Facid=135501&PAGE=1&SurveyType=H",
-        # "https://sais.health.pa.gov/CommonPOC/Content/PublicWeb/ltc-survey.asp?Facid=010901&PAGE=1&SurveyType=H",
-        # "https://sais.health.pa.gov/CommonPOC/Content/PublicWeb/ltc-survey.asp?Facid=101101&PAGE=1&SurveyType=H",
-        # "https://sais.health.pa.gov/CommonPOC/Content/PublicWeb/ltc-survey.asp?Facid=50670101&PAGE=1&SurveyType=H",
-        # "https://sais.health.pa.gov/CommonPOC/Content/PublicWeb/ltc-survey.asp?Facid=340801&PAGE=1&SurveyType=H",
-        # "https://sais.health.pa.gov/CommonPOC/Content/PublicWeb/ltc-survey.asp?Facid=21700101&PAGE=1&SurveyType=H",
-        # "https://sais.health.pa.gov/CommonPOC/Content/PublicWeb/ltc-survey.asp?Facid=440401&PAGE=1&SurveyType=H",
-        # "https://sais.health.pa.gov/CommonPOC/Content/PublicWeb/ltc-survey.asp?Facid=440601&PAGE=1&SurveyType=H",
-        # "https://sais.health.pa.gov/CommonPOC/Content/PublicWeb/ltc-survey.asp?Facid=440601&PAGE=1&SurveyType=H",
-    ]
-    
+    links = []     
     headers = {
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
         'Accept-Encoding': 'gzip, deflate, br, zstd',
@@ -225,12 +198,9 @@ def main():
     unique_list = list(set(links))    
     endpoints = get_endpoints(unique_list)
     # print(f'{endpoints}')
-    for link in tqdm(endpoints, desc="Scraping Progress", unit="link"):
-        data = scrape_pages(link, headers, cookies, data)
-        if data is not None: 
-            save_json(data)
-        else:
-            print(f"No data to save for link: {link}")
+    
+    run_app(endpoints, headers, cookies, data)
+    
             
 if __name__ == '__main__':
     main()

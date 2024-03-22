@@ -34,6 +34,18 @@ https://github.com/e-supple/PA-Department-of-Health-Survey-Scraper
 ## get_links()
 ### The get_links method fetches and parses a web page to extract specific links. It requests the content of the provided URL, then filters table rows based on certain criteria, including a check for a particular character in one of the table cells. Finally, it extracts and returns the href attributes of anchor tags within the first two cells of these filtered rows.
 
+### filtered_rows = [row for row in rows if len(row.findAll('td')) >= 4 and contains_adm(row.findAll('td')[3].text)]
+
+### terating Through the Table: The process begins by iterating through each row of the table. These rows are represented by the row variable in the list comprehension.
+
+### Ensuring Adequate Cells in Each Row: It checks that each row has at least 4 cells. This is to ensure that there's enough data in each row for further processing, and possibly to avoid errors when accessing a specific cell that may not exist in rows with fewer cells.
+
+### Identifying Specific Survey Categories: The code looks for rows where the fourth cell (row.findAll('td')[3], since indexing is zero-based) contains text that matches specific survey categories, identified by the presence of certain characters ('a', 'd', '3', 'm'). This is achieved through the contains_adm function, which presumably checks for these characters within the cell's text.
+
+### Building the Filtered List: Only rows that meet both criteria (having 4 or more cells and containing the specified survey category characters) are included in the filtered_rows list. This results in a filtered list of rows that are relevant to the specific analysis or processing task at hand, based on the survey categories of interest.
+
+
+
 ## save_json()
 ### Creates a JSON file in a designated directory to store extracted data. The filename is dynamically generated based on the facility name, sanitized to replace spaces and slashes with underscores and hyphens, respectively. If a file with the intended name already exists, a counter is appended to create a unique filename, preventing overwrites. The method saves the data in a readable JSON format and outputs the file's location.
 
