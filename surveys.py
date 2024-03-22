@@ -62,7 +62,7 @@ def get_links(url, headers):
     rows =  table.find_all('tr')
 
     filterd_rows = [row for row in rows if len(row.find_all('td')) >= 4 and contains_m(row.find_all('td')[3].text)]
-    links = [[cell for cell in row.find_all('td')[1]] for row in filterd_rows]
+    # links = [[cell for cell in row.find_all('td')[1]] for row in filterd_rows]
     urls = [cell.find('a')['href'] for row in filterd_rows for cell in row.find_all('td', limit=2) if cell.find('a')]
     
     return urls
@@ -104,16 +104,12 @@ def scrape_pages(link, headers, cookies, data):
     
     if select_element:
         options = select_element.find_all('option')
-        # filter dates between 2023 - 2024 
         options = filter_surveys_by_year(options)
         
         for option in options:
             eventid = option['value']
             date_txt = option.text.strip()
-            
-            print(f"Processing {date_txt} with eventid {eventid}")
-            
-            # Initialize survey_details dictionary here for each survey
+            # print(f"Processing {date_txt} with eventid {eventid}") #Debugg line
             survey_details = {'eventid': eventid, 'date': date_txt}
             
             survey_url = f"{base_url}ltc-survey.asp?facid={facid}&page=1&name=&SurveyType=H&eventid={eventid}" 
@@ -122,12 +118,8 @@ def scrape_pages(link, headers, cookies, data):
             tables = soup.findAll('table')
             
             if len(tables) >= 5:
-                # Extract data from the 6th table to the second-to-last
                 data_tables = tables[5:-1]
-                # Store combined text from these tables in 'data' key of survey_details
-                survey_details['data'] = ' '.join([table.text.strip() for table in data_tables])
-            
-            # Append the populated survey_details dictionary to the survey_data list
+                survey_details['data'] = ' '.join([table.text.strip() for table in data_tables])            
             survey_data.append(survey_details)
         all_survey_data['data'] = survey_data
         
@@ -140,13 +132,12 @@ def filter_surveys_by_year(options, years=[2023, 2024]):
     for option in options:
         date_text = option.text.strip()
         try:
-            # Assuming the date format is "MM/DD/YYYY" or similar
             survey_date = datetime.strptime(date_text, "%m/%d/%Y")
             if survey_date.year in years:
                 filtered_options.append(option)
                 print(f"Filtered Dates: Complete {filtered_options}")
         except ValueError:
-            # Handle the case where the date format does not match or parsing fails
+            # Handle date format does not match or parsing fails
             print(f"Error parsing date for option: {date_text}")
     return filtered_options
  
@@ -227,20 +218,16 @@ def main():
     
     data = {
         'csrf_token': '{481D89AA-A17F-4BBE-96B3-C9EE3BBBB2DF}',
-        # Include other form fields as required
     }
     
     main_page_url = 'https://apps.health.pa.gov/surveyspostedDAAC/DAAC-SurveysPosted_202402.aspx'
     links = get_links(url=main_page_url, headers=headers)
-    # print(f'Main Page URL: scraping started. {links}')
-    unique_list = list(set(links))
-    # print(f'Unique list of linkns has been created in order to remove duplicates. {unique_list}')
-    
+    unique_list = list(set(links))    
     endpoints = get_endpoints(unique_list)
     # print(f'{endpoints}')
     for link in tqdm(endpoints, desc="Scraping Progress", unit="link"):
         data = scrape_pages(link, headers, cookies, data)
-        if data is not None:  # Check if data is not None before proceeding
+        if data is not None: 
             save_json(data)
         else:
             print(f"No data to save for link: {link}")
