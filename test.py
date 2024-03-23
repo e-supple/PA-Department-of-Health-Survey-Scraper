@@ -1,6 +1,7 @@
 from datetime import datetime
 import os
 import json
+import time
 from urllib.parse import parse_qs, urlparse
 import httpx
 import asyncio
@@ -48,7 +49,13 @@ def filter_surveys_by_year(options, years=[2023, 2024]):
             print(f"Error parsing date for option: {date_text}")
     return filtered_options
 
-async def fetch_page(url: str, headers: dict = None, cookies: dict= None, retries: int = 3, delay: float = 2.0):
+async def fetch_page(url: str, headers: dict = None, cookies: dict = None, params: dict= None):
+    timeout = httpx.Timeout(10.0, read=30.0)
+    async with httpx.AsyncClient(timeout=timeout) as client:
+        response = await client.get(url, headers=headers, cookies=cookies)
+        return response
+    
+async def fetch_page_1(url: str, headers: dict = None, cookies: dict= None, retries: int = 3, delay: float = 2.0):
     for attempt in range(retries):
         try:
             async with httpx.AsyncClient(cookies=cookies, timeout=httpx.Timeout(10.0, read=30.0)) as client:
@@ -171,22 +178,40 @@ async def main():
         'ASPSESSIONIDSGCSTSCC': 'PBIMPPOAMDCLMMKCAGDCMGJD',
         'cookiesession1': '678B289230A0F4DA773BAF428CBD4812',
     }   
-    data = {
-        'csrf_token': '{481D89AA-A17F-4BBE-96B3-C9EE3BBBB2DF}',
+    params = {
+        'csrf_token': '{07802E4E-E746-4A43-A339-978640700D82}',
     }
-    testpoints = ['ltc-survey.asp?Facid=750301&PAGE=1&SurveyType=H', 'ltc-survey.asp?Facid=27171500&PAGE=1&SurveyType=H', 'ltc-survey.asp?Facid=061901&PAGE=1&SurveyType=H', 'ltc-survey.asp?Facid=195601&PAGE=1&SurveyType=H', 'ltc-survey.asp?Facid=120801&PAGE=1&SurveyType=H', 'ltc-survey.asp?Facid=22701501&PAGE=1&SurveyType=H', 'ltc-survey.asp?Facid=53020100&PAGE=1&SurveyType=H', 'ltc-survey.asp?Facid=24230101&PAGE=1&SurveyType=H']
+    testpoints = [
+        'ltc-survey.asp?Facid=750301&PAGE=1&SurveyType=H', 'ltc-survey.asp?Facid=27171500&PAGE=1&SurveyType=H', 
+        'ltc-survey.asp?Facid=061901&PAGE=1&SurveyType=H', 'ltc-survey.asp?Facid=195601&PAGE=1&SurveyType=H', 
+        'ltc-survey.asp?Facid=120801&PAGE=1&SurveyType=H', 'ltc-survey.asp?Facid=22701501&PAGE=1&SurveyType=H', 
+        'ltc-survey.asp?Facid=53020100&PAGE=1&SurveyType=H', 'ltc-survey.asp?Facid=24230101&PAGE=1&SurveyType=H'
+    ]
+    
     links = await async_getlinks(daac_url, headers=headers)
     unique_list = list(set(links))
     endpoints = get_endpoints(unique_list)
     
-    tasks = [scrape_pages(url, headers, cookies) for url in testpoints]  # Prepare coroutine list
-    results = await asyncio.gather(*tasks)  # Run concurrently
+    #tasks = [scrape_pages(url, headers, cookies) for url in endpoints]  # Prepare coroutine list
+    #results = await asyncio.gather(*tasks)  # Run concurrently
+    
+    batch_size = 10  # Number of concurrent requests
+    delay_between_batches = 15  # Seconds
+
+    for i in range(0, len(endpoints), batch_size):
+        batch = endpoints[i:i+batch_size]
+        tasks = [scrape_pages(url, headers, cookies, params) for url in endpoints]  # Prepare coroutine list
+        results = await asyncio.gather(*tasks)
+        save_json(results)
+        await asyncio.sleep(delay_between_batches)  # Delay before the next batch
     
     # Save results to JSON files
-    for result in results:
-        save_json(result)
+    #for result in results:
+        #save_json(result)
     
-    
-        
 if __name__ == "__main__":
+    start_time = time.time()  # record the start time
     asyncio.run(main())
+    end_time = time.time()  # record the end time
+    total_time = end_time - start_time  # calculate the execution time
+    print(f"Total execution time: {total_time} seconds")  
